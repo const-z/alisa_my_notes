@@ -32,7 +32,7 @@ export class DiskService {
     if (responseCloudApi.status === 200) {
       downloadLink = await responseCloudApi.json();
     } else {
-      throw new Error(responseCloudApi.statusText);
+      throw new Error(await responseCloudApi.text());
     }
 
     const responseDownloader = await fetch(downloadLink.href, {
@@ -44,7 +44,7 @@ export class DiskService {
     if (responseDownloader.status === 200) {
       notes = await responseDownloader.text();
     } else {
-      throw new Error(responseDownloader.statusText);
+      throw new Error(await responseDownloader.text());
     }
 
     return notes;
@@ -69,7 +69,7 @@ export class DiskService {
     if (responseCloudApi.status < 400) {
       uploadLink = await responseCloudApi.json();
     } else {
-      throw new Error(responseCloudApi.statusText);
+      throw new Error(await responseCloudApi.text());
     }
 
     const responseUploader = await fetch(uploadLink.href, {

@@ -13,7 +13,7 @@ export class AppService {
       session: body.session,
       version: body.version,
       response: {
-        end_session: false,
+        end_session: true,
         text: '',
       },
     };
