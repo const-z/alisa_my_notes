@@ -1,32 +1,50 @@
 import { Injectable } from '@nestjs/common';
 
 import { DiskService } from './disk.service';
+import { AlisaRequest } from './types';
+
+interface ProcessingParams {
+  userId: string;
+  value: string;
+  session: AlisaRequest['session'];
+  version: AlisaRequest['version'];
+}
 
 @Injectable()
 export class AppService {
   private notes: Map<string, string[]> = new Map();
+  private downloading: Map<string, Promise<void>> = new Map();
 
   constructor(private readonly diskService: DiskService) {}
 
-  async processRequest(userId: string, body: any): Promise<any> {
+  async processRequest({
+    session,
+    userId,
+    value,
+    version,
+  }: ProcessingParams): Promise<any> {
     const response = {
-      session: body.session,
-      version: body.version,
+      session,
+      version,
       response: {
         end_session: true,
         text: '',
       },
     };
 
+    // todo async download, save
     if (!this.notes.get(userId)) {
-      response.response.text = 'Загружаю список заметок';
-      void this.downloadNotes(userId);
-    }
+      if (!this.downloading.get(userId)) {
+        this.downloading.set(userId, this.downloadNotes(userId));
+      }
 
-    await this.updateNotes(
-      userId,
-      body.request.nlu?.intents?.test_add_note?.slots?.note?.value,
-    );
+      this.downloading.get(userId).then(async () => {
+        this.downloading.delete(userId);
+        await this.updateNotes(userId, value);
+      });
+    } else {
+      await this.updateNotes(userId, value);
+    }
 
     return response;
   }
@@ -36,9 +54,8 @@ export class AppService {
       return;
     }
 
-    const note = `${noteText}`;
-
-    this.notes.set(userId, [...(this.notes.get(userId) || []), noteText]);
+    const note = `- [ ] #task ${noteText}`;
+    this.notes.set(userId, [...(this.notes.get(userId) || []), note]);
     void this.uploadNotes(userId);
   }
 
